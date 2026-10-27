@@ -106,6 +106,16 @@ fun SettingsScreen(padding: PaddingValues) {
                 s.beepWhenConnected,
                 enabled = s.beepEnabled,
             ) { v -> update { it.copy(beepWhenConnected = v) } }
+            if (com.eitan.airtracker.SystemHelpers.alarmMuted(context)) {
+                Text(
+                    "עוצמת השעון המעורר בטלפון על 0 – לא תשמע צפצופים.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                FilledTonalButton(onClick = { com.eitan.airtracker.SystemHelpers.raiseAlarmVolume(context) }) {
+                    Text("הגבר עוצמה")
+                }
+            }
             OutlinedButton(onClick = { Beeper.play(context) }) {
                 Icon(Icons.Filled.NotificationsActive, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
@@ -135,10 +145,13 @@ fun SettingsScreen(padding: PaddingValues) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            FilledTonalButton(onClick = {
-                val i = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
-                runCatching { context.startActivity(i) }
-            }) { Text("פתח הגדרות אפליקציה / סוללה") }
+            if (com.eitan.airtracker.SystemHelpers.ignoringBatteryOptimizations(context)) {
+                Text("✓ פעילות ברקע ללא הגבלת סוללה", style = MaterialTheme.typography.bodyMedium)
+            } else {
+                FilledTonalButton(onClick = {
+                    com.eitan.airtracker.SystemHelpers.requestUnrestrictedBattery(context)
+                }) { Text("אפשר פעילות ברקע ללא הגבלה") }
+            }
         }
 
         SectionCard(title = "מראה") {

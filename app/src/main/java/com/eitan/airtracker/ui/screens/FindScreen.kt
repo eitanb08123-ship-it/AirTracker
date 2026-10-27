@@ -72,7 +72,13 @@ import com.eitan.airtracker.ui.theme.FindGreen
 import com.eitan.airtracker.ui.warnings
 
 @Composable
-fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
+fun FindScreen(
+    dark: Boolean,
+    padding: PaddingValues,
+    onOpenMap: () -> Unit,
+    onOpenDevices: () -> Unit,
+    onHunt: () -> Unit,
+) {
     val context = LocalContext.current
     val live by Graph.monitor.state.collectAsStateWithLifecycle()
     val history by Graph.history.collectAsStateWithLifecycle()
@@ -104,7 +110,6 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
         else -> arrowAngle
     }
     var showDiag by rememberSaveable { mutableStateOf(false) }
-    var hunting by rememberSaveable { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -147,10 +152,22 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
             SectionCard { WarningRow(err, Icons.Filled.Warning, MaterialTheme.colorScheme.error) }
         }
 
+        if (saved == null) {
+            SectionCard(title = "צעד ראשון") {
+                Text(
+                    "בחר את ה-AirPods שלך כדי שהאפליקציה תזהה רק אותן ותדע מתי הן מתחברות ומתנתקות.",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Button(onClick = onOpenDevices, modifier = Modifier.fillMaxWidth()) {
+                    Text("בחר אוזניות")
+                }
+            }
+        }
+
         SystemCheckCard(heading = h, phone = p, now = now)
 
         Button(
-            onClick = { hunting = true },
+            onClick = onHunt,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp),
@@ -160,7 +177,6 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Text("מצב חיפוש חם/קר (עם קליקים)", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         }
-        if (hunting) HuntScreen(onClose = { hunting = false })
 
         // ---------- signal-direction arrow (works when the AirPods are near)
         DirectionSweepCard(heading = h, detected = detected, withYou = withYou)
