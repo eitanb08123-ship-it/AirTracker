@@ -104,6 +104,7 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
         else -> arrowAngle
     }
     var showDiag by rememberSaveable { mutableStateOf(false) }
+    var hunting by rememberSaveable { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -147,6 +148,19 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
         }
 
         SystemCheckCard(heading = h, phone = p, now = now)
+
+        Button(
+            onClick = { hunting = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp),
+            shape = RoundedCornerShape(20.dp),
+        ) {
+            Icon(Icons.Filled.Explore, null, Modifier.size(24.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("מצב חיפוש חם/קר (עם קליקים)", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        }
+        if (hunting) HuntScreen(onClose = { hunting = false })
 
         // ---------- signal-direction arrow (works when the AirPods are near)
         DirectionSweepCard(heading = h, detected = detected, withYou = withYou)
