@@ -43,6 +43,23 @@ data class NearbyDevice(
     val proximity: AppleProximity?,
 )
 
+/** Raw counters shown in the in-app "system check" card. */
+data class ScanStats(
+    val scanning: Boolean = false,
+    val mode: String = "—",
+    val scanStartedMs: Long = 0L,
+    val restarts: Int = 0,
+    val lastError: Int? = null,
+    val totalPackets: Long = 0,
+    val applePackets: Long = 0,
+    val filteredOut: Long = 0,
+    val lastAnyMs: Long = 0L,
+    val lastAppleMs: Long = 0L,
+    val lastAppleModel: Int? = null,
+    val lastAppleRssi: Int? = null,
+    val savedModel: Int? = null,
+)
+
 data class LiveState(
     val bluetoothOn: Boolean = true,
     val scanning: Boolean = false,
@@ -86,6 +103,20 @@ class AirPodsMonitor(
 
     private val _state = MutableStateFlow(LiveState())
     val state: StateFlow<LiveState> = _state.asStateFlow()
+
+    private val _stats = MutableStateFlow(ScanStats())
+    val stats: StateFlow<ScanStats> = _stats.asStateFlow()
+    private var cTotal = 0L
+    private var cApple = 0L
+    private var cFiltered = 0L
+    private var lastAnyMs = 0L
+    private var lastAppleMs = 0L
+    private var lastAppleModel: Int? = null
+    private var lastAppleRssi: Int? = null
+    private var scanStartedMs = 0L
+    private var lastRestartMs = 0L
+    private var restarts = 0
+    private var lastError: Int? = null
 
     private val _nearby = MutableStateFlow<List<NearbyDevice>>(emptyList())
     val nearby: StateFlow<List<NearbyDevice>> = _nearby.asStateFlow()
@@ -212,6 +243,7 @@ class AirPodsMonitor(
         try {
             scanner.startScan(filters, settings, scanCallback)
             currentMode = mode
+            scanStartedMs = System.currentTimeMillis()
             _state.update { it.copy(scanning = true, error = null, bluetoothOn = true) }
         } catch (e: Exception) {
             Log.w(TAG, "startScan failed", e)
@@ -239,6 +271,7 @@ class AirPodsMonitor(
         }
 
         override fun onScanFailed(errorCode: Int) {
+            lastError = errorCode
             main.post {
                 currentMode = null
                 _state.update {
@@ -250,6 +283,8 @@ class AirPodsMonitor(
 
     private fun handleResult(r: ScanResult) {
         val now = System.currentTimeMillis()
+        cTotal++
+        lastAnyMs = now
         val record = r.scanRecord
         val prox = AppleProximityParser.parse(
             record?.getManufacturerSpecificData(AppleProximityParser.APPLE_ID)
@@ -269,7 +304,14 @@ class AirPodsMonitor(
 
     private fun onProximity(p: AppleProximity, rssi: Int, now: Long) {
         val saved = Graph.savedDevice.value
-        if (saved?.modelId != null && saved.modelId != p.modelId) return
+        cApple++
+        lastAppleMs = now
+        lastAppleModel = p.modelId
+        lastAppleRssi = rssi
+        if (saved?.modelId != null && saved.modelId != p.modelId) {
+            cFiltered++
+            return
+        }
 
         val f = fastEma?.let { it * 0.6 + rssi * 0.4 } ?: rssi.toDouble()
         val s = slowEma?.let { it * 0.92 + rssi * 0.08 } ?: rssi.toDouble()
@@ -293,10 +335,62 @@ class AirPodsMonitor(
         if (periodicJob?.isActive == true) return
         periodicJob = scope.launch {
             while (isActive) {
-                delay(10_000L)
-                tick()
+                delay(2_000L)
+                main.post { watchdog() }
+                publishStats()
+                tickCounter++
+                if (tickCounter % 5 == 0) tick()
             }
         }
+    }
+
+    private var tickCounter = 0
+
+    /**
+     * Android sometimes silently stops delivering scan results (Samsung battery
+     * optimisations, "scanning too frequently" throttling, a stuck BT stack).
+     * If a foreground scan received nothing for 12 s, restart it – at most every 35 s,
+     * because more than 5 starts in 30 s get the app blocked from scanning.
+     */
+    private fun watchdog() {
+        val now = System.currentTimeMillis()
+        val a = adapter ?: return
+        val desired = when {
+            fgUsers > 0 -> MODE_FOREGROUND
+            bgUsers > 0 -> MODE_BACKGROUND
+            else -> null
+        } ?: return
+        if (!a.isEnabled || !Perms.hasBluetooth(context)) return
+        val silentSince = maxOf(lastAnyMs, scanStartedMs)
+        val stuck = currentMode == null || (desired == MODE_FOREGROUND && now - silentSince > 12_000L)
+        if (stuck && now - lastRestartMs > 35_000L) {
+            lastRestartMs = now
+            restarts++
+            stopScan()
+            startScan(desired)
+        }
+    }
+
+    private fun publishStats() {
+        _stats.value = ScanStats(
+            scanning = currentMode != null,
+            mode = when (currentMode) {
+                MODE_FOREGROUND -> "מהיר (אפליקציה פתוחה)"
+                MODE_BACKGROUND -> "חסכוני (רקע)"
+                else -> "כבוי"
+            },
+            scanStartedMs = scanStartedMs,
+            restarts = restarts,
+            lastError = lastError,
+            totalPackets = cTotal,
+            applePackets = cApple,
+            filteredOut = cFiltered,
+            lastAnyMs = lastAnyMs,
+            lastAppleMs = lastAppleMs,
+            lastAppleModel = lastAppleModel,
+            lastAppleRssi = lastAppleRssi,
+            savedModel = Graph.savedDevice.value?.modelId,
+        )
     }
 
     private suspend fun tick() {

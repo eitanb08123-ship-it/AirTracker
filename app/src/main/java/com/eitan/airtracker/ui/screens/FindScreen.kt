@@ -146,6 +146,8 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
             SectionCard { WarningRow(err, Icons.Filled.Warning, MaterialTheme.colorScheme.error) }
         }
 
+        SystemCheckCard(heading = h, phone = p, now = now)
+
         // ---------- signal-direction arrow (works when the AirPods are near)
         DirectionSweepCard(heading = h, detected = detected, withYou = withYou)
 
