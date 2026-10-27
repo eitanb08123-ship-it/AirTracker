@@ -146,8 +146,11 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
             SectionCard { WarningRow(err, Icons.Filled.Warning, MaterialTheme.colorScheme.error) }
         }
 
-        // ---------- arrow
-        SectionCard(modifier = Modifier.clickable { showDiag = !showDiag }) {
+        // ---------- signal-direction arrow (works when the AirPods are near)
+        DirectionSweepCard(heading = h, detected = detected, now = now)
+
+        // ---------- GPS arrow (to the last known location)
+        SectionCard(title = "חץ למיקום האחרון (GPS)", modifier = Modifier.clickable { showDiag = !showDiag }) {
             Box(
                 Modifier
                     .fillMaxWidth()
