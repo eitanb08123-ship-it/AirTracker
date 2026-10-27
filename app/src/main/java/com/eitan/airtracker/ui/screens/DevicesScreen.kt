@@ -155,6 +155,7 @@ fun DevicesScreen(padding: PaddingValues) {
             item { Text("לא זוהו כרגע. פתח את הקופסה ליד הטלפון.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         items(appleNearby, key = { "a_" + it.address }) { n ->
+            val strongest = n.address == appleNearby.firstOrNull()?.address
             val p = n.proximity!!
             val battery = listOfNotNull(
                 p.leftPct?.let { "ש׳ $it%" },
@@ -164,7 +165,8 @@ fun DevicesScreen(padding: PaddingValues) {
             DeviceRow(
                 icon = Icons.Filled.Headphones,
                 title = "${p.modelName} (${p.modelHex})",
-                subtitle = "${n.rssi} dBm" + if (battery.isNotEmpty()) " · $battery" else "",
+                subtitle = (if (strongest) "הכי חזק – כנראה שלך · " else "") +
+                    "${n.rssi} dBm" + if (battery.isNotEmpty()) " · $battery" else "",
                 selected = saved?.modelId == p.modelId,
                 onClick = {
                     scope.launch {
