@@ -43,6 +43,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,8 +92,18 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
     val distance: Float? = nav.distance
     val arrowAngle: Float? = nav.arrow
     val northAngle: Float? = nav.north
-    val arrived = distance != null && last != null &&
-        distance <= maxOf(12f, last.accuracy, p?.accuracy ?: 0f)
+    // Inside the combined GPS uncertainty the bearing is pure noise.
+    val uncertainty = (last?.accuracy ?: 0f) + (p?.accuracy ?: 0f)
+    val arrived = distance != null && last != null && distance <= maxOf(15f, uncertainty)
+    val gpsTooWeak = p != null && p.accuracy > 60f
+    val withYou = live.connected
+    // Arrow only when it can actually be trusted.
+    val shownArrow = when {
+        withYou || arrived || gpsTooWeak -> null
+        h == null || h.unstable -> null
+        else -> arrowAngle
+    }
+    var showDiag by rememberSaveable { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -133,7 +147,7 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
         }
 
         // ---------- arrow
-        SectionCard {
+        SectionCard(modifier = Modifier.clickable { showDiag = !showDiag }) {
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -142,7 +156,7 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 NavigationArrow(
-                    arrowAngle = if (arrived) null else arrowAngle,
+                    arrowAngle = shownArrow,
                     northAngle = northAngle,
                     pulsing = detected || live.connected,
                     modifier = Modifier.fillMaxSize(),
@@ -150,8 +164,10 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
             }
             Text(
                 text = when {
+                    withYou -> "מחוברות אליך"
                     last == null -> "—"
                     arrived -> "הגעת לאזור"
+                    p == null -> "ממתין ל-GPS…"
                     distance != null -> Format.distance(distance)
                     else -> "ממתין ל-GPS…"
                 },
@@ -162,8 +178,12 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
             )
             Text(
                 text = when {
+                    withYou -> "האוזניות מחוברות לטלפון כרגע, כלומר הן בטווח של כמה מטרים ממך. אין לאן לנווט."
                     last == null -> "פתח את קופסת האוזניות ליד הטלפון כדי שיזוהו ויישמר מיקום."
-                    arrived -> "החץ מכוון למיקום השמור, ואתה כבר בתוכו. עכשיו השתמש במד הקרבה למטה."
+                    arrived -> "אתה בתוך טווח הדיוק של ה-GPS מהמיקום השמור (±${uncertainty.toInt()} מ׳). " +
+                        "כאן החץ כבר לא אמין – חפש לפי מד הקרבה ולפי הצפצוף."
+                    gpsTooWeak -> "ה-GPS חלש מדי לכיוון אמין (±${p?.accuracy?.toInt()} מ׳). צא לשטח פתוח או חכה כמה שניות."
+                    h?.unstable == true -> "החזק את הטלפון ישר מולך (מסך כלפי מעלה או מולך) כדי לראות כיוון."
                     else -> "אל המיקום האחרון שבו הטלפון זיהה את האוזניות · ${last.source.label}"
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -177,8 +197,34 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
                 WarningRow("אין חיישן מצפן זמין – מוצג רק מרחק.", Icons.Filled.Info)
             }
             last?.warnings(now)?.forEach { WarningRow(it, Icons.Filled.Warning) }
-            if (p != null && p.accuracy > 30f) {
+            if (p != null && p.accuracy > 30f && !gpsTooWeak) {
                 WarningRow("ה-GPS של הטלפון לא מדויק כרגע (±${p.accuracy.toInt()} מ׳).", Icons.Filled.Warning)
+            }
+            if (showDiag) {
+                val hdg = h?.azimuthDeg
+                val bearing = if (arrowAngle != null && northAngle != null) {
+                    ((arrowAngle - northAngle) % 360f + 360f) % 360f
+                } else null
+                Text(
+                    buildString {
+                        append("אבחון (הקש שוב להסתרה)\n")
+                        append("כיוון הטלפון (מגנטי): ${hdg?.let { "${it.toInt()}°" } ?: "—"}\n")
+                        append("כיוון ליעד (מצפון אמיתי): ${bearing?.let { "${it.toInt()}°" } ?: "—"}\n")
+                        append("דיוק GPS: ${p?.let { "±${it.accuracy.toInt()} מ׳" } ?: "—"} · ")
+                        append("דיוק יעד: ${last?.let { "±${it.accuracy.toInt()} מ׳" } ?: "—"}\n")
+                        append("השווה את \"כיוון הטלפון\" לאפליקציית מצפן – אם יש פער גדול, כייל בתנועת שמונה.")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    "הקש על הכרטיס להצגת נתוני אבחון",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
             }
         }
 

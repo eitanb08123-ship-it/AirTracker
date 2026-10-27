@@ -45,7 +45,11 @@ class PhoneLocation(private val context: Context) {
             }
         }
         try {
-            client.lastLocation.addOnSuccessListener { loc -> if (loc != null) trySend(loc) }
+            // Use the cached fix only if it is fresh; an old cached fix (possibly from
+            // a different place) is what made the arrow point the wrong way.
+            client.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null && ageMs(loc) < 30_000L) trySend(loc)
+            }
             client.requestLocationUpdates(request, callback, Looper.getMainLooper())
         } catch (e: SecurityException) {
             trySend(null)
@@ -69,10 +73,14 @@ class PhoneLocation(private val context: Context) {
             null
         }
         if (fresh != null) return fresh
-        return try {
+        val cached = try {
             client.lastLocation.await()
         } catch (e: Exception) {
             null
         }
+        return cached?.takeIf { ageMs(it) < 10 * 60_000L }
     }
+
+    private fun ageMs(loc: Location): Long =
+        (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) / 1_000_000L
 }
