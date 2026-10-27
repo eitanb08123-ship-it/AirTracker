@@ -96,8 +96,10 @@ private fun HuntContent(onClose: () -> Unit) {
 
     DisposableEffect(Unit) {
         view.keepScreenOn = true
+        Graph.monitor.suppressAutoBeep = true
         onDispose {
             view.keepScreenOn = false
+            Graph.monitor.suppressAutoBeep = false
             ticker.release()
         }
     }

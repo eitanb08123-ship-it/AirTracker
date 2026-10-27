@@ -44,6 +44,8 @@ fun SystemCheckCard(heading: Heading?, phone: Location?, now: Long) {
     val verdict: Pair<Boolean, String> = when {
         !live.bluetoothOn -> false to "Bluetooth כבוי – הפעל אותו."
         !Perms.hasBluetooth(context) -> false to "חסרה הרשאת \"מכשירים בקרבת מקום\" – אשר בהגדרות האפליקציה."
+        !Perms.hasPreciseLocation(context) ->
+            false to "אושר רק מיקום מקורב – החץ לא יעבוד. הגדרות האפליקציה > הרשאות > מיקום > הפעל \"מיקום מדויק\"."
         !stats.scanning -> false to "הסריקה לא פועלת. היא תופעל מחדש אוטומטית תוך כחצי דקה."
         stats.totalPackets == 0L && scanAge > 8_000 ->
             false to "הטלפון לא מקבל שום אות Bluetooth. כבה והדלק Bluetooth, או הפעל מחדש את הטלפון."
@@ -63,6 +65,18 @@ fun SystemCheckCard(heading: Heading?, phone: Location?, now: Long) {
             if (verdict.first) Icons.Filled.CheckCircle else Icons.Filled.Warning,
             if (verdict.first) FindGreen else MaterialTheme.colorScheme.tertiary,
         )
+        if (!Perms.hasPreciseLocation(context)) {
+            Button(onClick = {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:${context.packageName}"),
+                        )
+                    )
+                }
+            }, modifier = Modifier.fillMaxWidth()) { Text("פתח הגדרות הרשאות") }
+        }
         if (modelBlocked) {
             Button(onClick = {
                 scope.launch {

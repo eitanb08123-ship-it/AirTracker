@@ -134,7 +134,7 @@ fun MapScreen(dark: Boolean, padding: PaddingValues) {
                     )
                 }
             }
-            items(history, key = { it.timeMs }) { r ->
+            items(history) { r ->
                 HistoryItem(r, now, r == (selected ?: history.firstOrNull())) { selected = r }
                 HorizontalDivider(Modifier.padding(start = 64.dp), color = MaterialTheme.colorScheme.outlineVariant)
             }
