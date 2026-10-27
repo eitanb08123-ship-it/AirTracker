@@ -64,7 +64,7 @@ fun NavigationArrow(
         spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessLow),
         label = "north",
     )
-    val arrowAlpha by animateFloatAsState(if (arrowAngle == null) 0.2f else 1f, label = "alpha")
+    val arrowAlpha by animateFloatAsState(if (arrowAngle == null) 0f else 1f, label = "alpha")
     val transition = rememberInfiniteTransition(label = "pulse")
     val pulse by transition.animateFloat(
         initialValue = 0f,
@@ -115,6 +115,11 @@ fun NavigationArrow(
             }
         }
 
+        if (arrowAlpha < 1f) {
+            // no trustworthy direction: show a calm "you are here" dot instead of a fake arrow
+            drawCircle(primary.copy(alpha = 0.35f * (1f - arrowAlpha)), radius = r * 0.16f, center = c)
+            drawCircle(primary.copy(alpha = 1f - arrowAlpha), radius = r * 0.08f, center = c)
+        }
         rotate(arrow, c) {
             val top = c.y - r * 0.6f
             val bottom = c.y + r * 0.42f

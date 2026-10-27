@@ -147,10 +147,20 @@ fun FindScreen(dark: Boolean, padding: PaddingValues, onOpenMap: () -> Unit) {
         }
 
         // ---------- signal-direction arrow (works when the AirPods are near)
-        DirectionSweepCard(heading = h, detected = detected, now = now)
+        DirectionSweepCard(heading = h, detected = detected, withYou = withYou)
 
         // ---------- GPS arrow (to the last known location)
-        SectionCard(title = "חץ למיקום האחרון (GPS)", modifier = Modifier.clickable { showDiag = !showDiag }) {
+        val compactGps = (detected || withYou) && (arrived || withYou || last == null)
+        if (compactGps) {
+            SectionCard(title = "מיקום אחרון (GPS)") {
+                WarningRow(
+                    if (withYou) "האוזניות מחוברות לטלפון – הן בטווח של כמה מטרים ממך."
+                    else "אתה כבר במקום שבו הן זוהו לאחרונה. ה-GPS לא מדויק מספיק לכיוון כאן – השתמש בחץ האות שלמעלה.",
+                    Icons.Filled.Info,
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else SectionCard(title = "חץ למיקום האחרון (GPS)", modifier = Modifier.clickable { showDiag = !showDiag }) {
             Box(
                 Modifier
                     .fillMaxWidth()
