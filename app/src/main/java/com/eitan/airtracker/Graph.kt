@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.stateIn
 object Graph {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /** Set by the launcher shortcut / quick-settings tile to open search mode. */
+    val huntRequest = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     lateinit var store: Store
         private set
     lateinit var location: PhoneLocation

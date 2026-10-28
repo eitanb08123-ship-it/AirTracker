@@ -64,7 +64,21 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
         setContent { AirTrackerRoot() }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == ACTION_HUNT) Graph.huntRequest.value = true
+    }
+
+    companion object {
+        const val ACTION_HUNT = "com.eitan.airtracker.HUNT"
     }
 }
 
@@ -155,6 +169,16 @@ private fun MainScaffold(dark: Boolean) {
     val settings by Graph.settings.collectAsStateWithLifecycle()
     val live by Graph.monitor.state.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var hunting by rememberSaveable { mutableStateOf(false) }
+    val huntRequest by Graph.huntRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(huntRequest) {
+        if (huntRequest) {
+            tab = 0
+            hunting = true
+            Graph.huntRequest.value = false
+        }
+    }
+    if (hunting) com.eitan.airtracker.ui.screens.HuntScreen(onClose = { hunting = false })
 
     LaunchedEffect(settings.backgroundTracking) {
         if (settings.backgroundTracking) TrackerService.start(context)
@@ -200,7 +224,12 @@ private fun MainScaffold(dark: Boolean) {
             label = "tabs",
         ) { current ->
             when (current) {
-                0 -> FindScreen(dark, padding, onOpenMap = { tab = 1 })
+                0 -> FindScreen(
+                    dark, padding,
+                    onOpenMap = { tab = 1 },
+                    onOpenDevices = { tab = 2 },
+                    onHunt = { hunting = true },
+                )
                 1 -> MapScreen(dark, padding)
                 2 -> DevicesScreen(padding)
                 else -> SettingsScreen(padding)

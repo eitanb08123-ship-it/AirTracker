@@ -26,6 +26,9 @@ object Perms {
         granted(ctx, Manifest.permission.ACCESS_FINE_LOCATION) ||
             granted(ctx, Manifest.permission.ACCESS_COARSE_LOCATION)
 
+    /** False when the user picked "approximate" location – too coarse for the arrow. */
+    fun hasPreciseLocation(ctx: Context) = granted(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
+
     fun hasNotifications(ctx: Context) =
         Build.VERSION.SDK_INT < 33 || granted(ctx, Manifest.permission.POST_NOTIFICATIONS)
 

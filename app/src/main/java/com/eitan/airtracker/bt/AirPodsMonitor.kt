@@ -302,6 +302,10 @@ class AirPodsMonitor(
         if (prox != null) onProximity(prox, r.rssi, now)
     }
 
+    /** Set by the full-screen search mode so the one-shot alarm doesn't talk over its ticks. */
+    @Volatile
+    var suppressAutoBeep = false
+
     private fun onProximity(p: AppleProximity, rssi: Int, now: Long) {
         val saved = Graph.savedDevice.value
         cApple++
@@ -321,7 +325,7 @@ class AirPodsMonitor(
         _state.update {
             it.copy(rssi = rssi, smoothedRssi = f, trend = f - s, lastSeenMs = now, proximity = p)
         }
-        beep.onSignal(f, _state.value.connected, now)
+        if (!suppressAutoBeep) beep.onSignal(f, _state.value.connected, now)
 
         if (!wasSeen && now - lastNearbyRecord > 60_000L) {
             lastNearbyRecord = now
