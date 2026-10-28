@@ -93,14 +93,11 @@ private fun HuntContent(onClose: () -> Unit) {
     if (level > peak) peak = level
     var sound by rememberSaveable { mutableStateOf(true) }
     val ticker = remember { GeigerTicker(context) }
-    var muted by remember { mutableStateOf(com.eitan.airtracker.SystemHelpers.alarmMuted(context)) }
 
     DisposableEffect(Unit) {
         view.keepScreenOn = true
-        Graph.monitor.suppressAutoBeep = true
         onDispose {
             view.keepScreenOn = false
-            Graph.monitor.suppressAutoBeep = false
             ticker.release()
         }
     }
@@ -214,13 +211,6 @@ private fun HuntContent(onClose: () -> Unit) {
                     textAlign = TextAlign.Center,
                     fontSize = 15.sp,
                 )
-                if (sound && muted) {
-                    Spacer(Modifier.height(10.dp))
-                    FilledTonalButton(onClick = {
-                        com.eitan.airtracker.SystemHelpers.raiseAlarmVolume(context)
-                        muted = com.eitan.airtracker.SystemHelpers.alarmMuted(context)
-                    }) { Text("עוצמת השעון המעורר על 0 – לחץ להגברה") }
-                }
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FilledTonalButton(onClick = { sound = !sound }) {

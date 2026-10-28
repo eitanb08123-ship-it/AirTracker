@@ -299,45 +299,10 @@ class AirPodsMonitor(
                 _nearby.value = nearbyMap.values.sortedByDescending { it.rssi }
             }
         }
-        if (prox != null) onProximity(prox, r.rssi, now, address)
+        if (prox != null) onProximity(prox, r.rssi, now)
     }
 
-    private class Track(var ema: Double, var lastMs: Long)
-    private val tracks = HashMap<String, Track>()
-    private var lockedAddr: String? = null
-
-    /** Set by the full-screen search mode so the one-shot alarm doesn't talk over its ticks. */
-    @Volatile
-    var suppressAutoBeep = false
-
-    /**
-     * Several Apple devices (other people's AirPods, or each earbud separately) can be
-     * advertising at once. Mixing them makes the meter jump, so we lock onto ONE source:
-     * the strongest, and only switch when another is clearly stronger (8 dB) or ours vanished.
-     */
-    private fun pickSource(address: String, rssi: Int, now: Long): Boolean {
-        val t = tracks.getOrPut(address) { Track(rssi.toDouble(), now) }
-        t.ema = t.ema * 0.5 + rssi * 0.5
-        t.lastMs = now
-        tracks.entries.removeAll { now - it.value.lastMs > 6_000L }
-        val locked = lockedAddr?.let { tracks[it] }
-        val best = tracks.maxByOrNull { it.value.ema }
-        val newLock = when {
-            locked == null || now - locked.lastMs > 4_000L -> best?.key
-            best != null && best.key != lockedAddr && best.value.ema > locked.ema + 8 -> best.key
-            else -> lockedAddr
-        }
-        if (newLock != lockedAddr) {
-            lockedAddr = newLock
-            // start the smoothed value from the new source instead of blending two devices
-            val e = newLock?.let { tracks[it]?.ema }
-            fastEma = e
-            slowEma = e
-        }
-        return address == lockedAddr
-    }
-
-    private fun onProximity(p: AppleProximity, rssi: Int, now: Long, address: String) {
+    private fun onProximity(p: AppleProximity, rssi: Int, now: Long) {
         val saved = Graph.savedDevice.value
         cApple++
         lastAppleMs = now
@@ -356,7 +321,7 @@ class AirPodsMonitor(
         _state.update {
             it.copy(rssi = rssi, smoothedRssi = f, trend = f - s, lastSeenMs = now, proximity = p)
         }
-        if (!suppressAutoBeep) beep.onSignal(f, _state.value.connected, now)
+        beep.onSignal(f, _state.value.connected, now)
 
         if (!wasSeen && now - lastNearbyRecord > 60_000L) {
             lastNearbyRecord = now
@@ -432,16 +397,10 @@ class AirPodsMonitor(
         val now = System.currentTimeMillis()
         val s = _state.value
         if (s.smoothedRssi != null && !s.seenRecently(now)) {
-            main.post {
-                if (!_state.value.seenRecently(System.currentTimeMillis())) {
-                    fastEma = null
-                    slowEma = null
-                    lockedAddr = null
-                    tracks.clear()
-                    _state.update { it.copy(smoothedRssi = null, rssi = null, trend = 0.0) }
-                    beep.reset()
-                }
-            }
+            fastEma = null
+            slowEma = null
+            _state.update { it.copy(smoothedRssi = null, rssi = null, trend = 0.0) }
+            beep.reset()
         }
         when {
             s.connected && now - lastConnectedRecord > RECORD_INTERVAL_MS -> {

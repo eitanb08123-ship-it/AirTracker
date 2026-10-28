@@ -22,9 +22,7 @@ data class AppleProximity(
 ) {
     val modelName: String get() = AppleProximityParser.modelName(modelId)
     val modelHex: String get() = "0x%04X".format(modelId)
-    /** All-zero readings are not real data (format differs on some models) – treat as unavailable. */
-    val hasBattery: Boolean
-        get() = listOfNotNull(leftPct, rightPct, casePct).any { it > 0 }
+    val hasBattery: Boolean get() = leftPct != null || rightPct != null || casePct != null
 }
 
 object AppleProximityParser {

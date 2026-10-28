@@ -40,15 +40,6 @@ object Notifications {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun huntIntent(ctx: Context): PendingIntent = PendingIntent.getActivity(
-        ctx,
-        2,
-        Intent(ctx, MainActivity::class.java)
-            .setAction(MainActivity.ACTION_HUNT)
-            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
-
     @SuppressLint("MissingPermission")
     fun disconnected(ctx: Context, name: String?, rec: LocationRecord?) {
         if (!Perms.hasNotifications(ctx)) return
@@ -63,7 +54,6 @@ object Notifications {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openAppIntent(ctx))
-            .addAction(0, "חפש עכשיו", huntIntent(ctx))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()

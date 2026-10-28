@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AirTracker</string>
-    <string name="shortcut_hunt">מצב חיפוש</string>
-    <string name="shortcut_hunt_long">מצב חיפוש חם/קר</string>
-    <string name="tile_label">חפש AirPods</string>
 </resources>

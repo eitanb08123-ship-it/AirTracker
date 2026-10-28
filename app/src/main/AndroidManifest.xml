@@ -26,7 +26,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Map tiles -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -50,30 +49,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="com.eitan.airtracker.HUNT" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <meta-data
-                android:name="android.app.shortcuts"
-                android:resource="@xml/shortcuts" />
         </activity>
 
         <service
             android:name=".service.TrackerService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
-
-        <service
-            android:name=".service.HuntTileService"
-            android:exported="true"
-            android:icon="@drawable/ic_stat_tracker"
-            android:label="@string/tile_label"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
-            </intent-filter>
-        </service>
 
         <receiver
             android:name=".service.BtEventReceiver"
