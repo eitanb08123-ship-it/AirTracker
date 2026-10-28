@@ -69,11 +69,6 @@ fun ProximityMeter(smoothedRssi: Double?, trend: Double, rawRssi: Int?, modifier
                 )
             }
         }
-        Text(
-            "${(level * 100).toInt()} / 100",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-        )
         Text(signalLabel(smoothedRssi), style = MaterialTheme.typography.titleMedium)
         Text(
             trendLabel(trend) + (rawRssi?.let { "  ·  $it dBm" } ?: ""),

@@ -347,7 +347,6 @@ class AirPodsMonitor(
             cFiltered++
             return
         }
-        if (!pickSource(address, rssi, now)) return
 
         val f = fastEma?.let { it * 0.6 + rssi * 0.4 } ?: rssi.toDouble()
         val s = slowEma?.let { it * 0.92 + rssi * 0.08 } ?: rssi.toDouble()
