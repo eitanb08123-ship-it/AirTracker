@@ -68,6 +68,8 @@ fun SettingsScreen(padding: PaddingValues) {
     ) {
         Text("הגדרות", style = MaterialTheme.typography.headlineMedium)
 
+        NoiseControlCard()
+
         SectionCard(title = "צפצוף כשהאוזניות קרובות") {
             SwitchRow("צפצוף אוטומטי", "הצפצוף יוצא מרמקול הטלפון, לא מהאוזניות", s.beepEnabled) { v ->
                 update { it.copy(beepEnabled = v) }
